@@ -133,9 +133,9 @@ const RadarMap: React.FC<RadarMapProps> = ({ lat, lon, isDarkMode, onClose, t })
         zIndex: 500,
         tileSize: 512,
         zoomOffset: -1,
-        maxNativeZoom: 9, // Corresponding to zoom 10 for 256px tiles
+        maxNativeZoom: 10,
         maxZoom: 18,
-        className: 'radar-layer' // For custom transitions if needed
+        className: 'radar-layer'
       }).addTo(mapRef.current);
     }
   }, [currentIndex, frames, host]);
