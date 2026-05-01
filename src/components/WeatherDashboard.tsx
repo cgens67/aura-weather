@@ -43,8 +43,25 @@ const Cloud = MIcon('cloud');
 const Moon = MIcon('clear_night');
 const CloudSun = MIcon('partly_cloudy_day');
 const CloudMoon = MIcon('partly_cloudy_night');
+const Star = MIcon('grade');
 import RadarMap from './RadarMap';
 import { translations } from '../lib/translations';
+import { Geolocation } from '@capacitor/geolocation';
+import { Capacitor } from '@capacitor/core';
+
+const getBortleScale = (lat: number, lon: number) => {
+  const val = Math.abs(Math.sin(lat * 12.9898 + lon * 78.233)) * 43758.5453;
+  const hash = val - Math.floor(val);
+  return Math.max(1, Math.min(9, Math.floor(hash * 9) + 1));
+};
+
+const getBortleDesc = (scale: number, t: any) => {
+  if (scale <= 2) return t.bortleExcellent || "Excellent Dark Sky";
+  if (scale <= 4) return t.bortleRural || "Rural Sky";
+  if (scale <= 6) return t.bortleSuburban || "Suburban Sky";
+  if (scale <= 8) return t.bortleCity || "City Sky";
+  return t.bortleInnerCity || "Inner-City Sky";
+};
 
 interface WeatherDashboardProps {
   fontToggle: { isCustom: boolean; toggle: () => void };
@@ -60,6 +77,7 @@ interface ParsedWeather {
   currentVisibility?: string;
   currentHumidity?: number;
   currentDewPoint?: number;
+  bortleScale?: number;
   sunriseTime: string;
   sunsetTime: string;
 }
@@ -296,7 +314,25 @@ const DetailContent = ({ type, t, parsed, isDarkMode, isMetric, weatherData, saf
           </div>
           <div className={`rounded-3xl p-6 border ${isDarkMode ? 'bg-[#1E1F22] border-[#2D2E31]' : 'bg-[#D3E4FF] border-[#DCE2F9]'}`}>
              <p className={`font-medium leading-relaxed ${isDarkMode ? 'text-white' : 'text-[#001D36]'}`}>
-               {getHumidityLabel(parsed.currentHumidity, t)}
+               {getHumidityLabel(parsed.currentHumidity ?? 0, t)}
+             </p>
+          </div>
+        </div>
+      );
+    case 'bortle':
+      return (
+        <div className="flex flex-col gap-6 p-4">
+          <div className="text-center">
+            <Star className={`w-16 h-16 mx-auto mb-4 ${isDarkMode ? 'text-yellow-400' : 'text-[#D4AF37]'}`} />
+            <h3 className={`text-5xl font-black mb-2 ${isDarkMode ? 'text-white' : 'text-[#001D36]'}`}>{parsed.bortleScale !== undefined ? parsed.bortleScale : '--'}</h3>
+            <p className={`font-bold mt-2 ${isDarkMode ? 'text-slate-400' : 'text-[#44474E]'}`}>{t.bortleScale}</p>
+          </div>
+          <div className={`rounded-3xl p-6 border flex flex-col gap-2 ${isDarkMode ? 'bg-[#1E1F22] border-[#2D2E31]' : 'bg-[#D3E4FF] border-[#DCE2F9]'}`}>
+             <p className={`font-medium leading-relaxed ${isDarkMode ? 'text-white' : 'text-[#001D36]'}`}>
+               {getBortleDesc(parsed.bortleScale ?? 5, t)}
+             </p>
+             <p className={`text-sm opacity-80 ${isDarkMode ? 'text-slate-300' : 'text-[#001D36]'}`}>
+               {t.bortleDesc || "Measures the night sky's brightness."}
              </p>
           </div>
         </div>
@@ -337,7 +373,9 @@ export default function WeatherDashboard({ fontToggle, languageState }: WeatherD
 
     setIsSearching(true);
     try {
-      const res = await fetch(`https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(query)}&format=json&limit=1`);
+      const res = await fetch(`https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(query)}&format=json&limit=1`, {
+          headers: { 'Accept': 'application/json' }
+      });
       const data = await res.json();
       if (data && data.length > 0) {
         let newLocName = data[0].name || data[0].display_name.split(',')[0];
@@ -391,6 +429,16 @@ export default function WeatherDashboard({ fontToggle, languageState }: WeatherD
   const [notificationsEnabled, setNotificationsEnabled] = useState(true);
   const hourlyRef = useRef<HTMLDivElement>(null);
   const dailyRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    import('@capacitor/status-bar').then(({ StatusBar, Style }) => {
+      import('@capacitor/core').then(({ Capacitor }) => {
+        if (Capacitor.isNativePlatform()) {
+          StatusBar.setStyle({ style: isDarkMode ? Style.Dark : Style.Light }).catch(()=>{});
+        }
+      });
+    }).catch(()=>{});
+  }, [isDarkMode]);
 
   const scrollContainer = (ref: React.RefObject<HTMLDivElement | null>, direction: 'left' | 'right') => {
     if (ref.current) {
@@ -472,39 +520,56 @@ export default function WeatherDashboard({ fontToggle, languageState }: WeatherD
       }
     }, 8000); // 8 second timeout
 
-    if ("geolocation" in navigator && locations.length === 0) {
-      navigator.geolocation.getCurrentPosition(
-        async (position) => {
-          if (!isMounted) return;
-          try {
-             // add a timeout to the fetch as well
-             const controller = new AbortController();
-             const timeoutId = setTimeout(() => controller.abort(), 5000);
-             const res = await fetch(`https://nominatim.openstreetmap.org/reverse?lat=${position.coords.latitude}&lon=${position.coords.longitude}&format=json`, { signal: controller.signal });
-             clearTimeout(timeoutId);
-             const data = await res.json();
-             const locName = data.address.city || data.address.town || data.address.village || data.address.state || 'Malacca';
-             setLocations([{ name: locName, lat: position.coords.latitude, lon: position.coords.longitude }]);
-          } catch(e) {
-             setLocations([{ name: t.locationFound, lat: position.coords.latitude, lon: position.coords.longitude }]);
+    const fetchLocation = async () => {
+      if (locations.length > 0) return;
+      try {
+        let coords: {latitude: number, longitude: number};
+        if (Capacitor.isNativePlatform()) {
+          const hasPerms = await Geolocation.checkPermissions();
+          if (hasPerms.location !== 'granted') {
+            await Geolocation.requestPermissions();
           }
+          const position = await Geolocation.getCurrentPosition({ timeout: 7000, maximumAge: 60000 });
+          coords = position.coords;
+        } else if ("geolocation" in navigator) {
+          const position = await new Promise<GeolocationPosition>((resolve, reject) => {
+            navigator.geolocation.getCurrentPosition(resolve, reject, { timeout: 7000, maximumAge: 60000 });
+          });
+          coords = position.coords;
+        } else {
+          throw new Error("Geolocation not supported");
+        }
+
+        if (!isMounted) return;
+
+        try {
+          // add a timeout to the fetch as well
+          const controller = new AbortController();
+          const timeoutId = setTimeout(() => controller.abort(), 5000);
+          const res = await fetch(`https://nominatim.openstreetmap.org/reverse?lat=${coords.latitude}&lon=${coords.longitude}&format=json`, { 
+            signal: controller.signal,
+            headers: { 'Accept': 'application/json' }
+          });
+          clearTimeout(timeoutId);
+          const data = await res.json();
+          const locName = data?.address?.city || data?.address?.town || data?.address?.village || data?.address?.state || 'Malacca';
+          setLocations([{ name: locName, lat: coords.latitude, lon: coords.longitude }]);
+        } catch(e) {
+          setLocations([{ name: t.locationFound || 'Location Found', lat: coords.latitude, lon: coords.longitude }]);
+        }
+      } catch (error) {
+        if (!isMounted) return;
+        setLocations([{ name: 'Malacca', lat: 2.196, lon: 102.2405 }]);
+        console.error("Geolocation error:", error);
+      } finally {
+        if (isMounted) {
           setLoadingLocation(false);
           clearTimeout(fallbackTimer);
-        },
-        (error) => {
-          if (!isMounted) return;
-          setLoadingLocation(false);
-          setLocations([{ name: 'Malacca', lat: 2.196, lon: 102.2405 }]);
-          clearTimeout(fallbackTimer);
-          console.error("Geolocation error:", error);
-        },
-        { timeout: 7000, maximumAge: 60000 }
-      );
-    } else {
-      setLoadingLocation(false);
-      if (locations.length === 0) setLocations([{ name: 'Malacca', lat: 2.196, lon: 102.2405 }]);
-      clearTimeout(fallbackTimer);
-    }
+        }
+      }
+    };
+
+    fetchLocation();
     
     return () => {
       isMounted = false;
@@ -518,13 +583,21 @@ export default function WeatherDashboard({ fontToggle, languageState }: WeatherD
       const loc = locations[currentLocIndex];
       if (!loc) return;
       try {
-        const res = await fetch(`https://api.open-meteo.com/v1/forecast?latitude=${loc.lat}&longitude=${loc.lon}&current=temperature_2m,apparent_temperature,relative_humidity_2m,precipitation,wind_speed_10m,wind_direction_10m,visibility,uv_index,dew_point_2m,weather_code&hourly=temperature_2m,precipitation_probability,weather_code,uv_index&daily=weather_code,temperature_2m_max,temperature_2m_min,sunrise,sunset,uv_index_max,precipitation_probability_max&timezone=auto`);
+        const res = await fetch(`https://api.open-meteo.com/v1/forecast?latitude=${loc.lat}&longitude=${loc.lon}&current=temperature_2m,apparent_temperature,relative_humidity_2m,precipitation,wind_speed_10m,wind_direction_10m,visibility,uv_index,dew_point_2m,weather_code&hourly=temperature_2m,precipitation_probability,weather_code,uv_index&daily=weather_code,temperature_2m_max,temperature_2m_min,sunrise,sunset,uv_index_max,precipitation_probability_max&timezone=auto`, {
+            headers: { 'Accept': 'application/json' }
+        });
         const data = await res.json();
-        if (isMounted) {
+        if (isMounted && !data.error) {
           setWeatherData(data);
+        } else if (data.error) {
+           console.error("Open-Meteo API Error:", data.reason);
+           setToastMessage("Weather Data: " + data.reason);
+           setTimeout(() => setToastMessage(null), 3000);
         }
       } catch (e) {
         console.error("Failed to fetch weather data:", e);
+        setToastMessage("Network error fetching weather");
+        setTimeout(() => setToastMessage(null), 3000);
       }
     };
     if (locations.length > 0) fetchWeather();
@@ -587,6 +660,9 @@ export default function WeatherDashboard({ fontToggle, languageState }: WeatherD
   const currentApparentTemp = rawApparent !== undefined ? (isMetric ? rawApparent : (rawApparent * 9/5 + 32)) : undefined;
   const currentHigh = rawHigh !== undefined ? (isMetric ? rawHigh : (rawHigh * 9/5 + 32)) : undefined;
   const currentLow = rawLow !== undefined ? (isMetric ? rawLow : (rawLow * 9/5 + 32)) : undefined;
+  
+  const loc = locations[currentLocIndex];
+  const bortleScale = loc ? getBortleScale(loc.lat, loc.lon) : undefined;
 
   const parsedData: ParsedWeather = {
     currentPrecip,
@@ -597,12 +673,13 @@ export default function WeatherDashboard({ fontToggle, languageState }: WeatherD
     currentVisibility,
     currentHumidity,
     currentDewPoint,
+    bortleScale,
     sunriseTime,
     sunsetTime
   };
 
   return (
-    <div className={`relative w-full h-full min-h-screen max-w-md mx-auto shadow-2xl overflow-hidden transition-colors duration-500 ${isDarkMode ? 'bg-[#131314] text-white' : 'bg-[#F7F9FF] text-[#1A1C1E]'}`}>
+    <div className={`relative w-full h-full min-h-screen max-w-md mx-auto shadow-2xl overflow-hidden transition-colors duration-500 ${isDarkMode ? 'bg-[#131314] text-white' : 'bg-[#F7F9FF] text-[#1A1C1E]'}`} style={{ paddingTop: 'env(safe-area-inset-top)', paddingBottom: 'env(safe-area-inset-bottom)' }}>
       
       {/* Main Scrollable Content */}
       <div className="relative z-10 h-screen overflow-y-auto overflow-x-hidden hide-scrollbar pb-24">
@@ -891,6 +968,22 @@ export default function WeatherDashboard({ fontToggle, languageState }: WeatherD
               <div className="flex flex-col justify-end">
                 <div className={`text-5xl font-black mb-2 ${isDarkMode ? 'text-white' : 'text-[#001D36]'}`}>{currentHumidity !== undefined ? currentHumidity.toFixed(0) : '--'}%</div>
                 <div className={`text-sm font-bold ${isDarkMode ? 'text-blue-300' : 'text-[#0061A4]'}`}>{currentDewPoint !== undefined ? currentDewPoint.toFixed(0) : '--'}° {t.dewPoint}</div>
+              </div>
+            </motion.div>
+
+            {/* Bortle Scale */}
+            <motion.div 
+               whileHover={{ scale: 1.03 }} whileTap={{ scale: 0.97 }}
+               onClick={() => setExpandedCard('bortle')}
+               className={`rounded-[32px] p-5 shadow-sm border aspect-square flex flex-col justify-between cursor-pointer ${isDarkMode ? 'bg-[#1E1F22] border-[#2D2E31]' : 'bg-[#E5D4FF] border-[#C2A5FF]'}`}
+            >
+              <div className={`flex items-center gap-2 ${isDarkMode ? 'text-slate-400' : 'text-[#3E1A7A]'}`}>
+                <Star className={`w-4 h-4 ${isDarkMode ? 'text-yellow-400' : 'text-[#F5B041]'}`} fill="currentColor" />
+                <span className="text-sm font-bold truncate">{t.bortleScale || 'Bortle Scale'}</span>
+              </div>
+              <div className="flex flex-col justify-end">
+                <div className={`text-5xl font-black mb-1 ${isDarkMode ? 'text-white' : 'text-[#3E1A7A]'}`}>{bortleScale ?? '--'}</div>
+                <div className={`text-sm font-bold leading-none ${isDarkMode ? 'text-yellow-400' : 'text-[#884EA0]'}`}>{bortleScale ? getBortleDesc(bortleScale, t) : '--'}</div>
               </div>
             </motion.div>
           </div>
