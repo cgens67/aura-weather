@@ -44,10 +44,16 @@ const Moon = MIcon('clear_night');
 const CloudSun = MIcon('partly_cloudy_day');
 const CloudMoon = MIcon('partly_cloudy_night');
 const Star = MIcon('grade');
+const StarOutline = MIcon('star');
+const MapIcon = MIcon('map');
+const LocationIcon = MIcon('location_on');
+const ForecastIcon = MIcon('routine');
 import RadarMap from './RadarMap';
 import { translations } from '../lib/translations';
 import { Geolocation } from '@capacitor/geolocation';
 import { Capacitor } from '@capacitor/core';
+import { Haptics, ImpactStyle } from '@capacitor/haptics';
+import { loadNativeTranslations } from '../lib/useNativeResources';
 
 const getBortleScale = (lat: number, lon: number) => {
   const val = Math.abs(Math.sin(lat * 12.9898 + lon * 78.233)) * 43758.5453;
@@ -327,13 +333,30 @@ const DetailContent = ({ type, t, parsed, isDarkMode, isMetric, weatherData, saf
             <h3 className={`text-5xl font-black mb-2 ${isDarkMode ? 'text-white' : 'text-[#001D36]'}`}>{parsed.bortleScale !== undefined ? parsed.bortleScale : '--'}</h3>
             <p className={`font-bold mt-2 ${isDarkMode ? 'text-slate-400' : 'text-[#44474E]'}`}>{t.bortleScale}</p>
           </div>
-          <div className={`rounded-3xl p-6 border flex flex-col gap-2 ${isDarkMode ? 'bg-[#1E1F22] border-[#2D2E31]' : 'bg-[#D3E4FF] border-[#DCE2F9]'}`}>
-             <p className={`font-medium leading-relaxed ${isDarkMode ? 'text-white' : 'text-[#001D36]'}`}>
-               {getBortleDesc(parsed.bortleScale ?? 5, t)}
-             </p>
-             <p className={`text-sm opacity-80 ${isDarkMode ? 'text-slate-300' : 'text-[#001D36]'}`}>
-               {t.bortleDesc || "Measures the night sky's brightness."}
-             </p>
+          <div className={`rounded-3xl p-6 border flex flex-col gap-4 ${isDarkMode ? 'bg-[#1E1F22] border-[#2D2E31]' : 'bg-[#D3E4FF] border-[#DCE2F9]'}`}>
+             <div className="flex flex-col gap-2">
+               <p className={`font-bold text-lg ${isDarkMode ? 'text-white' : 'text-[#001D36]'}`}>
+                 {getBortleDesc(parsed.bortleScale ?? 5, t)}
+               </p>
+               <p className={`text-sm opacity-80 ${isDarkMode ? 'text-slate-300' : 'text-[#001D36]'}`}>
+                 {t.bortleDesc || "The Bortle scale is a nine-level numeric scale that measures the night sky's brightness of a particular location."}
+               </p>
+             </div>
+             
+             <div className="space-y-4 pt-4 border-t border-black/10 dark:border-white/10">
+                {[
+                  { level: "1-2", label: t.bortleExcellent, color: "bg-black" },
+                  { level: "3-4", label: t.bortleRural, color: "bg-green-900" },
+                  { level: "5-6", label: t.bortleSuburban, color: "bg-yellow-700" },
+                  { level: "7-8", label: t.bortleCity, color: "bg-orange-700" },
+                  { level: "9", label: t.bortleInnerCity, color: "bg-red-900" }
+                ].map((item, idx) => (
+                  <div key={idx} className="flex items-center gap-3">
+                    <div className={`w-12 h-8 rounded-lg ${item.color} flex items-center justify-center text-[10px] text-white font-bold`}>{item.level}</div>
+                    <span className={`text-xs font-medium ${isDarkMode ? 'text-slate-300' : 'text-[#001D36]'}`}>{item.label}</span>
+                  </div>
+                ))}
+             </div>
           </div>
         </div>
       );
@@ -349,7 +372,16 @@ interface LocationData {
 }
 
 export default function WeatherDashboard({ fontToggle, languageState }: WeatherDashboardProps) {
-  const t = translations[languageState.current];
+  const [t, setT] = useState(translations[languageState.current]);
+  const language = languageState.current;
+
+  useEffect(() => {
+    const loadStrings = async () => {
+      const strings = await loadNativeTranslations(language);
+      setT(strings);
+    };
+    loadStrings();
+  }, [language]);
 
   const [locations, setLocations] = useState<LocationData[]>([]);
   const [currentLocIndex, setCurrentLocIndex] = useState(0);
@@ -361,6 +393,12 @@ export default function WeatherDashboard({ fontToggle, languageState }: WeatherD
   const [showSettings, setShowSettings] = useState(false);
   const [showRadar, setShowRadar] = useState(false);
   const [expandedCard, setExpandedCard] = useState<string | null>(null);
+  const handleCardInteraction = async (id: string | null) => {
+    if (Capacitor.isNativePlatform()) {
+      await Haptics.impact({ style: ImpactStyle.Light });
+    }
+    setExpandedCard(id);
+  };
   const [loadingLocation, setLoadingLocation] = useState(true);
   
   const locationName = locations[currentLocIndex]?.name || t.locating;
@@ -852,7 +890,7 @@ export default function WeatherDashboard({ fontToggle, languageState }: WeatherD
             {/* Precipitation */}
             <motion.div 
                whileHover={{ scale: 1.03 }} whileTap={{ scale: 0.97 }}
-               onClick={() => setExpandedCard('precipitation')}
+               onClick={() => handleCardInteraction('precipitation')}
                className={`rounded-[32px] p-5 shadow-sm border aspect-square flex flex-col justify-between cursor-pointer ${isDarkMode ? 'bg-[#1E1F22] border-[#2D2E31]' : 'bg-white border-[#DCE2F9]'}`}
             >
               <div className={`flex items-center gap-2 ${isDarkMode ? 'text-slate-400' : 'text-[#44474E]'}`}>
@@ -871,7 +909,7 @@ export default function WeatherDashboard({ fontToggle, languageState }: WeatherD
             {/* Wind */}
             <motion.div 
                whileHover={{ scale: 1.03 }} whileTap={{ scale: 0.97 }}
-               onClick={() => setExpandedCard('wind')}
+               onClick={() => handleCardInteraction('wind')}
                className={`rounded-[32px] p-1 shadow-sm border aspect-square relative overflow-hidden cursor-pointer ${isDarkMode ? 'bg-[#1E1F22] border-[#2D2E31]' : 'bg-white border-[#DCE2F9]'}`}
             >
                <div className={`absolute inset-2 shape-wind flex flex-col justify-between p-4 ${isDarkMode ? 'bg-[#2A2B2E]' : 'bg-[#F1F3F9]'}`}>
@@ -895,7 +933,7 @@ export default function WeatherDashboard({ fontToggle, languageState }: WeatherD
             {/* Sunrise & Sunset */}
             <motion.div 
               whileHover={{ scale: 1.03 }} whileTap={{ scale: 0.97 }}
-              onClick={() => setExpandedCard('sunrise')}
+              onClick={() => handleCardInteraction('sunrise')}
               className={`rounded-[32px] p-5 shadow-sm border aspect-square relative overflow-hidden cursor-pointer ${isDarkMode ? 'bg-[#1E1F22] border-[#2D2E31]' : 'bg-white border-[#DCE2F9]'}`}
             >
               <div className={`flex items-center gap-2 z-10 relative ${isDarkMode ? 'text-slate-400' : 'text-[#44474E]'}`}>
@@ -919,7 +957,7 @@ export default function WeatherDashboard({ fontToggle, languageState }: WeatherD
             {/* UV Index */}
             <motion.div 
                whileHover={{ scale: 1.03 }} whileTap={{ scale: 0.97 }}
-               onClick={() => setExpandedCard('uv')}
+               onClick={() => handleCardInteraction('uv')}
                className={`rounded-[32px] p-2 shadow-sm border aspect-square cursor-pointer ${isDarkMode ? 'bg-[#1E1F22] border-[#2D2E31]' : 'bg-white border-[#DCE2F9]'}`}
             >
                <div className={`h-full w-full shape-uv flex flex-col items-center justify-center relative shadow-sm ${isDarkMode ? 'bg-[#2A2B2E]' : 'bg-[#F1F3F9]'}`}>
@@ -943,7 +981,7 @@ export default function WeatherDashboard({ fontToggle, languageState }: WeatherD
             {/* Visibility */}
             <motion.div 
                whileHover={{ scale: 1.03 }} whileTap={{ scale: 0.97 }}
-               onClick={() => setExpandedCard('visibility')}
+               onClick={() => handleCardInteraction('visibility')}
                className={`rounded-[32px] p-3 shadow-sm border aspect-square flex items-center justify-center cursor-pointer ${isDarkMode ? 'bg-[#1E1F22] border-[#2D2E31]' : 'bg-white border-[#DCE2F9]'}`}
             >
                <div className={`w-full h-full shape-visibility flex flex-col justify-center items-center relative border-4 border-solid border-transparent ${isDarkMode ? 'bg-[#2A2B2E]' : 'bg-[#F1F3F9]'}`}>
@@ -958,7 +996,7 @@ export default function WeatherDashboard({ fontToggle, languageState }: WeatherD
             {/* Humidity */}
             <motion.div 
                whileHover={{ scale: 1.03 }} whileTap={{ scale: 0.97 }}
-               onClick={() => setExpandedCard('humidity')}
+               onClick={() => handleCardInteraction('humidity')}
                className={`rounded-[32px] p-5 shadow-sm border aspect-square flex flex-col justify-between cursor-pointer ${isDarkMode ? 'bg-blue-900/20 border-blue-800' : 'bg-[#D3E4FF] border-[#DCE2F9]'}`}
             >
               <div className={`flex items-center gap-2 ${isDarkMode ? 'text-white' : 'text-[#001D36]'}`}>
@@ -974,7 +1012,7 @@ export default function WeatherDashboard({ fontToggle, languageState }: WeatherD
             {/* Bortle Scale */}
             <motion.div 
                whileHover={{ scale: 1.03 }} whileTap={{ scale: 0.97 }}
-               onClick={() => setExpandedCard('bortle')}
+               onClick={() => handleCardInteraction('bortle')}
                className={`rounded-[32px] p-5 shadow-sm border aspect-square flex flex-col justify-between cursor-pointer ${isDarkMode ? 'bg-[#1E1F22] border-[#2D2E31]' : 'bg-[#E5D4FF] border-[#C2A5FF]'}`}
             >
               <div className={`flex items-center gap-2 ${isDarkMode ? 'text-slate-400' : 'text-[#3E1A7A]'}`}>
@@ -1290,6 +1328,35 @@ export default function WeatherDashboard({ fontToggle, languageState }: WeatherD
         )}
       </AnimatePresence>
 
+      {/* Bottom Navigation (Material 3 Style) */}
+      <div className={`fixed bottom-0 left-0 right-0 z-50 flex justify-around items-center px-4 transition-colors duration-300 border-t ${isDarkMode ? 'bg-[#131214] border-white/5' : 'bg-[#F3F4F9] border-black/5'}`} style={{ height: 'calc(80px + env(safe-area-inset-bottom))', paddingBottom: 'env(safe-area-inset-bottom)' }}>
+        {[
+          { icon: ForecastIcon, label: t.forecast || 'Forecast', active: !showRadar && !showLocations, onClick: () => { setShowRadar(false); setShowLocations(false); } },
+          { icon: MapIcon, label: t.radar || 'Radar', active: showRadar, onClick: () => { setShowRadar(true); setShowLocations(false); } },
+          { icon: LocationIcon, label: t.locations || 'Cities', active: showLocations, onClick: () => { setShowRadar(false); setShowLocations(true); } }
+        ].map((item, idx) => (
+          <button 
+            key={idx}
+            onClick={async () => {
+              if (Capacitor.isNativePlatform()) await Haptics.impact({ style: ImpactStyle.Light });
+              item.onClick();
+            }}
+            className="flex flex-col items-center gap-1 w-full relative group"
+          >
+            <div className="relative flex items-center justify-center">
+              <motion.div 
+                initial={false}
+                animate={{ width: item.active ? 64 : 0, opacity: item.active ? 1 : 0 }}
+                className={`absolute h-8 rounded-full ${isDarkMode ? 'bg-blue-900/40' : 'bg-[#D3E4FF]'}`}
+              />
+              <item.icon className={`w-6 h-6 relative z-10 transition-colors duration-300 ${item.active ? (isDarkMode ? 'text-blue-300' : 'text-[#001D36]') : (isDarkMode ? 'text-slate-400' : 'text-[#44474E]')}`} />
+            </div>
+            <span className={`text-[11px] font-bold transition-colors duration-300 ${item.active ? (isDarkMode ? 'text-white' : 'text-[#001D36]') : (isDarkMode ? 'text-slate-400' : 'text-[#44474E]')}`}>
+              {item.label}
+            </span>
+          </button>
+        ))}
+      </div>
     </div>
   );
 }

@@ -4,4 +4,27 @@
     <string name="title_activity_main">Aura Weather</string>
     <string name="package_name">com.auraweather.app</string>
     <string name="custom_url_scheme">com.auraweather.app</string>
+    
+    <!-- Weather Strings -->
+    <string name="uv_index">UV Index</string>
+    <string name="visibility">Visibility</string>
+    <string name="humidity">Humidity</string>
+    <string name="dew_point">Dew Point</string>
+    <string name="bortle_scale">Bortle Scale</string>
+    <string name="wind_speed">Wind Speed</string>
+    <string name="precipitation">Precipitation</string>
+    <string name="sunrise">Sunrise</string>
+    <string name="sunset">Sunset</string>
+    <string name="feels_like">Feels like</string>
+    <string name="low">Low</string>
+    <string name="high">High</string>
+    <string name="search_placeholder">Search city...</string>
+    <string name="no_results">No results found</string>
+    <string name="failed_fetch">Failed to fetch weather data</string>
+    <string name="bortle_excellent">Excellent Dark Sky</string>
+    <string name="bortle_rural">Rural Sky</string>
+    <string name="bortle_suburban">Suburban Sky</string>
+    <string name="bortle_city">City Sky</string>
+    <string name="bortle_inner_city">Inner-City Sky</string>
+    <string name="bortle_desc">Measures the night sky\'s brightness</string>
 </resources>
