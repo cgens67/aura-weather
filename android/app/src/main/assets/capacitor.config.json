@@ -1,0 +1,5 @@
+{
+	"appId": "com.auraweather.app",
+	"appName": "Aura Weather",
+	"webDir": "dist"
+}
