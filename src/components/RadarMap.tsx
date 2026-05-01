@@ -133,7 +133,7 @@ const RadarMap: React.FC<RadarMapProps> = ({ lat, lon, isDarkMode, onClose, t })
         zIndex: 500,
         tileSize: 512,
         zoomOffset: -1,
-        maxNativeZoom: 10,
+        maxNativeZoom: 8, // Set to 8 (effectively 9 with offset) to be safe for RainViewer
         maxZoom: 18,
         className: 'radar-layer'
       }).addTo(mapRef.current);
