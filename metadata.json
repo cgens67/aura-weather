@@ -1,0 +1,8 @@
+{
+  "name": "Aura Weather",
+  "description": "Aura Weather, a Material Design 3 Expressive Weather app with interactive radar, detailed forecasts, and location-based updates.",
+  "requestFramePermissions": [
+    "geolocation"
+  ],
+  "majorCapabilities": []
+}
