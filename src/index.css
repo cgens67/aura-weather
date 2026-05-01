@@ -6,12 +6,17 @@
   --font-system: ui-sans-serif, system-ui, -apple-system, sans-serif;
 }
 
-body {
+html, body {
   margin: 0;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
   background-color: #F7F9FF;
   color: #1A1C1E;
+  overscroll-behavior-y: none; /* Disable pull-to-refresh and bounce */
+  user-select: none; /* Disable text selection */
+  -webkit-user-select: none;
+  -webkit-touch-callout: none; /* Disable context menu */
+  -webkit-tap-highlight-color: transparent; /* Remove blue highlight on tap */
 }
 
 /* Material You Shapes */
@@ -38,6 +43,10 @@ body {
 
 .icon-unfilled {
   font-variation-settings: 'FILL' 0;
+}
+
+img {
+  -webkit-user-drag: none;
 }
 
 /* Hide scrollbar for horizontal scrolling elements */
