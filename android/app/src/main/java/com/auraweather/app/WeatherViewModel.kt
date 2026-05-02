@@ -18,12 +18,43 @@ class WeatherViewModel : ViewModel() {
     private val _bortleScale = MutableStateFlow<Int?>(null)
     val bortleScale: StateFlow<Int?> = _bortleScale
 
+    private val geocodingService: NominatimApiService by lazy {
+        Retrofit.Builder()
+            .baseUrl("https://nominatim.openstreetmap.org/")
+            .addConverterFactory(GsonConverterFactory.create())
+            .build()
+            .create(NominatimApiService::class.java)
+    }
+
     private val apiService: WeatherApiService by lazy {
         Retrofit.Builder()
             .baseUrl("https://api.open-meteo.com/")
             .addConverterFactory(GsonConverterFactory.create())
             .build()
             .create(WeatherApiService::class.java)
+    }
+
+    private val _locationName = MutableStateFlow("Locating...")
+    val locationName: StateFlow<String> = _locationName
+
+    fun searchLocation(query: String) {
+        viewModelScope.launch {
+            _isLoading.value = true
+            try {
+                val results = geocodingService.search(query)
+                if (results.isNotEmpty()) {
+                    val result = results[0]
+                    val lat = result.lat.toDouble()
+                    val lon = result.lon.toDouble()
+                    _locationName.value = result.name ?: result.display_name.split(",")[0]
+                    fetchWeather(lat, lon)
+                }
+            } catch (e: Exception) {
+                e.printStackTrace()
+            } finally {
+                _isLoading.value = false
+            }
+        }
     }
 
     fun fetchWeather(lat: Double, lon: Double) {

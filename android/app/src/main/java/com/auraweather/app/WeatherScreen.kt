@@ -22,41 +22,160 @@ fun WeatherScreen(viewModel: WeatherViewModel) {
     val weatherData by viewModel.weatherState.collectAsState()
     val bortleScale by viewModel.bortleScale.collectAsState()
     val isLoading by viewModel.isLoading.collectAsState()
+    val locationName by viewModel.locationName.collectAsState()
+    
+    var searchQuery by remember { mutableStateOf("") }
+    var selectedTab by remember { mutableIntStateOf(0) }
+    val keyboardController = androidx.compose.ui.platform.LocalSoftwareKeyboardController.current
 
-    Surface(
+    Scaffold(
         modifier = Modifier.fillMaxSize(),
-        color = Color(0xFF131314) // Dark mode background
-    ) {
+        containerColor = Color(0xFF131314),
+        bottomBar = {
+            NavigationBar(
+                containerColor = Color(0xFF1E1F22),
+                contentColor = Color.White
+            ) {
+                NavigationBarItem(
+                    selected = selectedTab == 0,
+                    onClick = { selectedTab = 0 },
+                    icon = { Icon(Icons.Rounded.Cloud, contentDescription = null) },
+                    label = { Text("Weather") },
+                    colors = NavigationBarItemDefaults.colors(
+                        selectedIconColor = Color(0xFFD3E4FF),
+                        selectedTextColor = Color(0xFFD3E4FF),
+                        indicatorColor = Color(0xFF004678),
+                        unselectedIconColor = Color.Gray,
+                        unselectedTextColor = Color.Gray
+                    )
+                )
+                NavigationBarItem(
+                    selected = selectedTab == 1,
+                    onClick = { selectedTab = 1 },
+                    icon = { Icon(Icons.Rounded.Map, contentDescription = null) },
+                    label = { Text("Radar") },
+                    colors = NavigationBarItemDefaults.colors(
+                        selectedIconColor = Color(0xFFD3E4FF),
+                        selectedTextColor = Color(0xFFD3E4FF),
+                        indicatorColor = Color(0xFF004678),
+                        unselectedIconColor = Color.Gray,
+                        unselectedTextColor = Color.Gray
+                    )
+                )
+                NavigationBarItem(
+                    selected = selectedTab == 2,
+                    onClick = { selectedTab = 2 },
+                    icon = { Icon(Icons.Rounded.LocationOn, contentDescription = null) },
+                    label = { Text("Cities") },
+                    colors = NavigationBarItemDefaults.colors(
+                        selectedIconColor = Color(0xFFD3E4FF),
+                        selectedTextColor = Color(0xFFD3E4FF),
+                        indicatorColor = Color(0xFF004678),
+                        unselectedIconColor = Color.Gray,
+                        unselectedTextColor = Color.Gray
+                    )
+                )
+            }
+        }
+    ) { paddingValues ->
         Column(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(16.dp)
+                .padding(paddingValues)
+                .padding(horizontal = 16.dp)
+                .padding(top = 24.dp)
         ) {
-            Text(
-                text = "Aura Weather",
-                style = MaterialTheme.typography.titleLarge,
-                color = Color.White,
-                fontWeight = FontWeight.Bold
-            )
+            if (selectedTab == 0) {
+                WeatherHeader(locationName)
 
-            Spacer(modifier = Modifier.height(24.dp))
+                Spacer(modifier = Modifier.height(16.dp))
 
-            if (isLoading) {
+                // Search Bar
+                TextField(
+                    value = searchQuery,
+                    onValueChange = { searchQuery = it },
+                    modifier = Modifier.fillMaxWidth(),
+                    placeholder = { Text("Search city...", color = Color.Gray) },
+                    leadingIcon = { Icon(Icons.Rounded.Search, contentDescription = null, tint = Color.Gray) },
+                    keyboardOptions = androidx.compose.foundation.text.KeyboardOptions(
+                        imeAction = androidx.compose.ui.text.input.ImeAction.Search
+                    ),
+                    keyboardActions = androidx.compose.foundation.text.KeyboardActions(
+                        onSearch = {
+                            if (searchQuery.isNotEmpty()) {
+                                viewModel.searchLocation(searchQuery)
+                                keyboardController?.hide()
+                            }
+                        }
+                    ),
+                    colors = TextFieldDefaults.colors(
+                        focusedContainerColor = Color(0xFF1E1F22),
+                        unfocusedContainerColor = Color(0xFF1E1F22),
+                        focusedIndicatorColor = Color.Transparent,
+                        unfocusedIndicatorColor = Color.Transparent,
+                        cursorColor = Color.White,
+                        focusedTextColor = Color.White,
+                        unfocusedTextColor = Color.White
+                    ),
+                    shape = RoundedCornerShape(24.dp),
+                    singleLine = true
+                )
+
+                Spacer(modifier = Modifier.height(24.dp))
+
+                if (isLoading) {
+                    Box(modifier = Modifier.fillWeight(1f).fillMaxWidth(), contentAlignment = Alignment.Center) {
+                        CircularProgressIndicator(color = Color(0xFFD3E4FF))
+                    }
+                } else {
+                    weatherData?.let { data ->
+                        WeatherContent(data, bortleScale)
+                    } ?: run {
+                        Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                            Text("Please search for a city", color = Color.Gray)
+                        }
+                    }
+                }
+            } else if (selectedTab == 1) {
                 Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                    CircularProgressIndicator(color = Color(0xFFD3E4FF))
+                    Text("Radar coming soon", color = Color.White)
                 }
             } else {
-                weatherData?.let { data ->
-                    WeatherContent(data, bortleScale)
-                } ?: run {
-                    Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                        Text("Locating...", color = Color.Gray)
-                    }
+                Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                    Text("Saved cities coming soon", color = Color.White)
                 }
             }
         }
     }
 }
+
+@Composable
+fun WeatherHeader(locationName: String) {
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.SpaceBetween,
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Column {
+            Text(
+                text = locationName,
+                style = MaterialTheme.typography.headlineMedium,
+                color = Color.White,
+                fontWeight = FontWeight.Bold
+            )
+            Text(
+                text = "Aura Weather",
+                style = MaterialTheme.typography.bodySmall,
+                color = Color.Gray
+            )
+        }
+        IconButton(onClick = { /* Settings */ }) {
+            Icon(Icons.Rounded.Settings, contentDescription = "Settings", tint = Color.White)
+        }
+    }
+}
+
+private fun Modifier.fillWeight(weight: Float) = this.then(Modifier.weight(weight))
 
 @Composable
 fun WeatherContent(data: WeatherResponse, bortleScale: Int?) {
