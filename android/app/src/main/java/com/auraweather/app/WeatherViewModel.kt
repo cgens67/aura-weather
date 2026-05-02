@@ -5,6 +5,7 @@ import androidx.lifecycle.viewModelScope
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
+import okhttp3.OkHttpClient
 import retrofit2.Retrofit
 import retrofit2.converter.gson.GsonConverterFactory
 
@@ -19,8 +20,17 @@ class WeatherViewModel : ViewModel() {
     val bortleScale: StateFlow<Int?> = _bortleScale
 
     private val geocodingService: NominatimApiService by lazy {
+        val okHttpClient = OkHttpClient.Builder()
+            .addInterceptor { chain ->
+                val request = chain.request().newBuilder()
+                    .header("User-Agent", "AuraWeatherApp/1.0 (cgenshin587@gmail.com)")
+                    .build()
+                chain.proceed(request)
+            }
+            .build()
         Retrofit.Builder()
             .baseUrl("https://nominatim.openstreetmap.org/")
+            .client(okHttpClient)
             .addConverterFactory(GsonConverterFactory.create())
             .build()
             .create(NominatimApiService::class.java)
