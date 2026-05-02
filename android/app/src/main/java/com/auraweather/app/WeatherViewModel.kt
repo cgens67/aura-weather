@@ -34,7 +34,7 @@ class WeatherViewModel : ViewModel() {
             .create(WeatherApiService::class.java)
     }
 
-    private val _locationName = MutableStateFlow("Locating...")
+    private val _locationName = MutableStateFlow("Melaka")
     val locationName: StateFlow<String> = _locationName
 
     fun searchLocation(query: String) {

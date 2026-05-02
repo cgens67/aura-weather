@@ -5,6 +5,8 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.KeyboardActions
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.*
 import androidx.compose.material3.*
@@ -13,9 +15,13 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.platform.LocalSoftwareKeyboardController
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.auraweather.app.R
 
 @Composable
 fun WeatherScreen(viewModel: WeatherViewModel) {
@@ -26,7 +32,7 @@ fun WeatherScreen(viewModel: WeatherViewModel) {
     
     var searchQuery by remember { mutableStateOf("") }
     var selectedTab by remember { mutableIntStateOf(0) }
-    val keyboardController = androidx.compose.ui.platform.LocalSoftwareKeyboardController.current
+    val keyboardController = LocalSoftwareKeyboardController.current
 
     Scaffold(
         modifier = Modifier.fillMaxSize(),
@@ -95,12 +101,12 @@ fun WeatherScreen(viewModel: WeatherViewModel) {
                     value = searchQuery,
                     onValueChange = { searchQuery = it },
                     modifier = Modifier.fillMaxWidth(),
-                    placeholder = { Text("Search city...", color = Color.Gray) },
+                    placeholder = { Text(stringResource(R.string.search_placeholder), color = Color.Gray) },
                     leadingIcon = { Icon(Icons.Rounded.Search, contentDescription = null, tint = Color.Gray) },
-                    keyboardOptions = androidx.compose.foundation.text.KeyboardOptions(
-                        imeAction = androidx.compose.ui.text.input.ImeAction.Search
+                    keyboardOptions = KeyboardOptions(
+                        imeAction = ImeAction.Search
                     ),
-                    keyboardActions = androidx.compose.foundation.text.KeyboardActions(
+                    keyboardActions = KeyboardActions(
                         onSearch = {
                             if (searchQuery.isNotEmpty()) {
                                 viewModel.searchLocation(searchQuery)
@@ -124,7 +130,7 @@ fun WeatherScreen(viewModel: WeatherViewModel) {
                 Spacer(modifier = Modifier.height(24.dp))
 
                 if (isLoading) {
-                    Box(modifier = Modifier.fillWeight(1f).fillMaxWidth(), contentAlignment = Alignment.Center) {
+                    Box(modifier = Modifier.weight(1f).fillMaxWidth(), contentAlignment = Alignment.Center) {
                         CircularProgressIndicator(color = Color(0xFFD3E4FF))
                     }
                 } else {
@@ -132,7 +138,7 @@ fun WeatherScreen(viewModel: WeatherViewModel) {
                         WeatherContent(data, bortleScale)
                     } ?: run {
                         Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                            Text("Please search for a city", color = Color.Gray)
+                            Text(stringResource(R.string.please_search), color = Color.Gray)
                         }
                     }
                 }
@@ -164,7 +170,7 @@ fun WeatherHeader(locationName: String) {
                 fontWeight = FontWeight.Bold
             )
             Text(
-                text = "Aura Weather",
+                text = stringResource(R.string.app_name),
                 style = MaterialTheme.typography.bodySmall,
                 color = Color.Gray
             )
@@ -174,8 +180,6 @@ fun WeatherHeader(locationName: String) {
         }
     }
 }
-
-private fun Modifier.fillWeight(weight: Float) = this.then(Modifier.weight(weight))
 
 @Composable
 fun WeatherContent(data: WeatherResponse, bortleScale: Int?) {
@@ -211,7 +215,7 @@ fun MainTempCard(current: CurrentWeather) {
                 color = Color.White
             )
             Text(
-                text = "Feels like ${current.apparentTemperature.toInt()}°",
+                text = "${stringResource(R.string.feels_like)} ${current.apparentTemperature.toInt()}°",
                 color = Color.Gray
             )
         }
@@ -222,16 +226,16 @@ fun MainTempCard(current: CurrentWeather) {
 fun InfoGrid(current: CurrentWeather, bortleScale: Int?) {
     Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
         Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-            InfoCard(Modifier.weight(1f), "Humidity", "${current.humidity}%", Icons.Rounded.WaterDrop)
-            InfoCard(Modifier.weight(1f), "Wind", "${current.windSpeed} km/h", Icons.Rounded.Air)
+            InfoCard(Modifier.weight(1f), stringResource(R.string.humidity), "${current.humidity}%", Icons.Rounded.WaterDrop)
+            InfoCard(Modifier.weight(1f), stringResource(R.string.wind_speed), "${current.windSpeed} km/h", Icons.Rounded.Air)
         }
         Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-            InfoCard(Modifier.weight(1f), "UV Index", "${current.uvIndex}", Icons.Rounded.WbSunny)
-            InfoCard(Modifier.weight(1f), "Visibility", "${current.visibility} km", Icons.Rounded.Visibility)
+            InfoCard(Modifier.weight(1f), stringResource(R.string.uv_index), "${current.uvIndex}", Icons.Rounded.WbSunny)
+            InfoCard(Modifier.weight(1f), stringResource(R.string.visibility), "${current.visibility} km", Icons.Rounded.Visibility)
         }
         Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-            InfoCard(Modifier.weight(0.5f), "Bortle Scale", "${bortleScale ?: "--"}", Icons.Rounded.Star)
-            Box(Modifier.weight(0.5f)) // Spacer for grid alignment
+            InfoCard(Modifier.weight(0.5f), stringResource(R.string.bortle_scale), "${bortleScale ?: "--"}", Icons.Rounded.Star)
+            Box(Modifier.weight(0.5f))
         }
     }
 }

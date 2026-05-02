@@ -21,6 +21,8 @@
     <string name="search_placeholder">Search city...</string>
     <string name="no_results">No results found</string>
     <string name="failed_fetch">Failed to fetch weather data</string>
+    <string name="locating">Locating...</string>
+    <string name="please_search">Please search for a city</string>
     <string name="bortle_excellent">Excellent Dark Sky</string>
     <string name="bortle_rural">Rural Sky</string>
     <string name="bortle_suburban">Suburban Sky</string>
