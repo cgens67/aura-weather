@@ -1292,8 +1292,6 @@ export default function WeatherDashboard({ fontToggle, languageState }: WeatherD
               <motion.div 
                 initial={{ y: '100%' }} animate={{ y: 0 }} exit={{ y: '100%' }}
                 transition={{ type: "spring", damping: 25, stiffness: 200 }}
-                drag="y" dragConstraints={{ top: 0, bottom: 0 }} dragElastic={0.2}
-                onDragEnd={(e, info) => { if (info.offset.y > 60) setExpandedCard(null); }}
                 className={`absolute bottom-0 left-0 right-0 z-[70] rounded-t-[40px] shadow-[0_-10px_40px_rgba(0,0,0,0.2)] max-h-[85vh] overflow-y-auto ${isDarkMode ? 'bg-[#1E1F22]' : 'bg-white'}`}
               >
                   <div className="sticky top-0 pt-4 pb-2 z-10 flex justify-center bg-inherit rounded-t-[40px]">
@@ -1305,7 +1303,7 @@ export default function WeatherDashboard({ fontToggle, languageState }: WeatherD
                      </button>
                   </div>
                   
-                  <div className="p-4 pb-12">
+                  <div className="p-4 pb-[calc(3rem+env(safe-area-inset-bottom))]">
                      <DetailContent type={expandedCard} t={t} parsed={parsedData} isDarkMode={isDarkMode} isMetric={isMetric} weatherData={weatherData} safeStartIndex={safeStartIndex} />
                   </div>
               </motion.div>
