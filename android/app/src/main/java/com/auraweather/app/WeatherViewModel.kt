@@ -37,6 +37,14 @@ class WeatherViewModel : ViewModel() {
     private val _locationName = MutableStateFlow("Melaka")
     val locationName: StateFlow<String> = _locationName
 
+    private val _savedCities = MutableStateFlow(listOf("Melaka", "Kuala Lumpur", "Singapore"))
+    val savedCities: StateFlow<List<String>> = _savedCities
+
+    init {
+        // Initial fetch
+        fetchWeather(2.196, 102.2405)
+    }
+
     fun searchLocation(query: String) {
         viewModelScope.launch {
             _isLoading.value = true

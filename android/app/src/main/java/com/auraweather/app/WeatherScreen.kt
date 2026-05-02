@@ -144,11 +144,45 @@ fun WeatherScreen(viewModel: WeatherViewModel) {
                 }
             } else if (selectedTab == 1) {
                 Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                    Text("Radar coming soon", color = Color.White)
+                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                        Icon(Icons.Rounded.Map, contentDescription = null, tint = Color.Gray, modifier = Modifier.size(64.dp))
+                        Spacer(modifier = Modifier.height(16.dp))
+                        Text("Radar view coming in next update", color = Color.Gray)
+                    }
                 }
             } else {
-                Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                    Text("Saved cities coming soon", color = Color.White)
+                val savedCities by viewModel.savedCities.collectAsState()
+                
+                Text(
+                    text = "Saved Cities",
+                    style = MaterialTheme.typography.headlineSmall,
+                    color = Color.White,
+                    fontWeight = FontWeight.Bold
+                )
+                
+                Spacer(modifier = Modifier.height(16.dp))
+                
+                LazyColumn(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                    items(savedCities) { city ->
+                        Card(
+                            onClick = {
+                                viewModel.searchLocation(city)
+                                selectedTab = 0
+                            },
+                            modifier = Modifier.fillMaxWidth(),
+                            shape = RoundedCornerShape(16.dp),
+                            colors = CardDefaults.cardColors(containerColor = Color(0xFF1E1F22))
+                        ) {
+                            Row(
+                                modifier = Modifier.padding(20.dp).fillMaxWidth(),
+                                horizontalArrangement = Arrangement.SpaceBetween,
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Text(text = city, color = Color.White, fontSize = 18.sp, fontWeight = FontWeight.Medium)
+                                Icon(Icons.Rounded.ChevronRight, contentDescription = null, tint = Color.Gray)
+                            }
+                        }
+                    }
                 }
             }
         }

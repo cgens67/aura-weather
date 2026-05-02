@@ -11,9 +11,6 @@ class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         
-        // Initial fetch (Melaka coords as default)
-        viewModel.fetchWeather(2.196, 102.2405)
-        
         setContent {
             WeatherScreen(viewModel)
         }
